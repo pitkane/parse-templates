@@ -1,29 +1,77 @@
 let path = require('path');
 let walk = require('walk');
 const fs = require('fs');
-let files = [];
+
 let cheerio = require('cheerio');
+let Git = require("nodegit");
+let rimraf = require("rimraf");
 
-// Walker options
-let walker = walk.walk('/Users/Mikko/vilkas/temp_repos/FI_VILKAS', {
-	followLinks: false
+// print process.argv
+// process.argv.forEach(function (val, index, array) {
+//   console.log(index + ': ' + val);
+// });
+
+if (process.argv[2] == null ) {
+  console.log("No git repo given");
+  return;
+}
+
+let gitRepo = process.argv[2];
+
+
+_fetchRepo(gitRepo).then(function(result) {
+
+  walkIt()
+    .then(function(result) {
+      // console.log(result);
+      buildHTML(result);
+      _cleanUp();
+    });
+
+
 });
 
-// collect all the files for scraping
-walker.on('file', function (root, stat, next) {
-	// Add this file to the list of files
-	// console.log(path.extname(stat.name));
-	if (path.extname(stat.name) == '.html') {
-		files.push(root + '/' + stat.name);
-	}
-	next();
-});
+function walkIt() {
+  return new Promise(function(resolve, reject) {
 
-let htmlData = [];
+    var localPath = require("path").join(__dirname, "tmp");
 
-// scrape
-walker.on('end', function () {
-	// console.log(files);
+    // Walker options
+    let walker = walk.walk(localPath, {
+    	followLinks: false
+    });
+
+    var filesWTF = [];
+
+    // collect all the files for scraping
+    walker.on('file', function (root, stat, next) {
+    	// Add this file to the list of files
+    	// console.log(path.extname(stat.name));
+    	if (path.extname(stat.name) == '.html') {
+    		filesWTF.push(root + '/' + stat.name);
+        // console.log(root + '/' + stat.name);
+    	}
+    	next();
+    });
+
+    walker.on("end", function () {
+      // console.log("all done");
+      // console.log("We should have files");
+      // console.log(filesWTF);
+      resolve(filesWTF);
+
+    });
+
+
+  });
+}
+
+
+function buildHTML(files) {
+  let htmlData = [];
+  // console.log(files);
+  // scrape
+
 	files.forEach(file => {
 
 		let readFile = fs.readFileSync(file);
@@ -41,23 +89,9 @@ walker.on('end', function () {
 			json.data = json.data.replace("//]]>","");
 			// console.log(json.data)
 			htmlData.push(json);
-		
+
 		}
-		// let $ = cheerio.load(fs.readFileSync(file), {
-		// 	// normalizeWhitespace: true,
-		// 	// decodeEntities: true
-		// });
-		// $('script').each(function (i, elem) {
-		// 	console.log(elem);
-		// 	let json = {
-		// 		filename: file,
-		// 		data: $(this).html()
-		// 	};
-		// 	json.data = json.data.replace("//<![CDATA[","");
-		// 	json.data = json.data.replace("//]]>","");
-		// 	// console.log(json.data)
-		// 	htmlData.push(json);
-		// });
+
 	});
 
 	// console.log(htmlData);
@@ -81,23 +115,87 @@ walker.on('end', function () {
 	});
 
 	fs.appendFile('./output.html', endHTML, function (err) {
-			// return console.log(err);
-	    });
+	// return console.log(err);
+  });
 
-	// buildHTML('#content').text('Hello there!');
-	// console.log(buildHTML.html());
-
-	// fs.writeFile("./output.html", buildHTML.html(), function (err) {
-	// 	if (err) {
-	// 		return console.log(err);
-	// 	}
-	// 	console.log("The file output.html was saved!");
-	// });
-
-});
+}
 
 
 
+
+
+function _fetchRepo(gitRepo) {
+  return new Promise(function(resolve, reject) {
+
+    var cloneOptions = {};
+    cloneOptions.fetchOpts = {
+      callbacks: {
+        certificateCheck: function() { return 1; },
+
+        // Credentials are passed two arguments, url and username. We forward the
+        // `userName` argument to the `sshKeyFromAgent` function to validate
+        // authentication.
+        credentials: function(url, userName) {
+          return Git.Cred.sshKeyFromAgent(userName);
+        }
+      }
+    };
+
+    console.log("Downloading repo, please wait");
+
+    Git.Clone(gitRepo, "./tmp", cloneOptions)
+      .then(function(repo) {
+        console.log("jou");
+        resolve();
+      })
+      .catch(function(err) {
+        console.log(err);
+        reject();
+      });
+
+  });
+}
+
+
+
+function _cleanUp() {
+  rimraf('./tmp', function() {
+    console.log("All cleaned up");
+  });
+}
+
+
+/*
+
+// buildHTML('#content').text('Hello there!');
+// console.log(buildHTML.html());
+
+// fs.writeFile("./output.html", buildHTML.html(), function (err) {
+// 	if (err) {
+// 		return console.log(err);
+// 	}
+// 	console.log("The file output.html was saved!");
+// });
+
+
+
+// let $ = cheerio.load(fs.readFileSync(file), {
+// 	// normalizeWhitespace: true,
+// 	// decodeEntities: true
+// });
+// $('script').each(function (i, elem) {
+// 	console.log(elem);
+// 	let json = {
+// 		filename: file,
+// 		data: $(this).html()
+// 	};
+// 	json.data = json.data.replace("//<![CDATA[","");
+// 	json.data = json.data.replace("//]]>","");
+// 	// console.log(json.data)
+// 	htmlData.push(json);
+// });
+
+*/
 
 
 			// console.log(elem)
@@ -115,7 +213,7 @@ walker.on('end', function () {
 // console.log(file);
 // let $ = cheerio.load('<h2 class="title">Hello world</h2>');
 // fs.readFile(file, function () {
-// // doStuff 
+// // doStuff
 //   console.log("moro");
 //   // next();
 // });
@@ -135,6 +233,6 @@ walker.on('end', function () {
 
 
 // fs.readFile(fileStats.name, function () {
-//       // doStuff 
+//       // doStuff
 //       next();
 //     });

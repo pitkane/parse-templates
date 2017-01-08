@@ -11,6 +11,8 @@
   "dependencies": {
     "cheerio": "^0.22.0",
     "escape-html": "^1.0.3",
+    "nodegit": "^0.16.0",
+    "rimraf": "^2.5.4",
     "walk": "^2.3.9"
   }
 }
