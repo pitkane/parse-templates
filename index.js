@@ -91,6 +91,7 @@ function buildHTML(files) {
 			};
 			json.data = json.data.replace("//<![CDATA[","");
 			json.data = json.data.replace("//]]>","");
+      json.data = json.data.replace("// ]]>", "");
 			// console.log(json.data)
 			htmlData.push(json);
 
