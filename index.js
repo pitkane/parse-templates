@@ -17,7 +17,11 @@ if (process.argv[2] == null ) {
 }
 
 let gitRepo = process.argv[2];
+let gitRepoHTTP = gitRepo.replace("git@github.com:", "https://github.com/") + "/blob/develop";
+gitRepoHTTP = gitRepoHTTP.replace(".git", "");
 
+console.log(gitRepo);
+console.log(gitRepoHTTP);
 
 _fetchRepo(gitRepo).then(function(result) {
 
@@ -104,7 +108,11 @@ function buildHTML(files) {
 	});
 
 	htmlData.forEach(function(element) {
-		let html = "<h2>" + element.filename + "</h2>";
+
+    let toBeRemoved = require("path").join(__dirname, "tmp");
+    let url = element.filename.replace(toBeRemoved, "");
+    url = gitRepoHTTP + url;
+		let html = "<a href='" + url + "'><h2>" + element.filename + "</h2></a>";
 		html += "<pre><code class='js'>";
 		html += element.data;
 		html += "</code></pre>";
